@@ -11,11 +11,11 @@ def create_okr_parser():
         template="""
 You are an OKR parsing assistant.
 
-Given the OKR: \"{input}\" and examples: {context}, extract and return a structured JSON:
+Given the OKR: "{input}" and examples: {context}, extract and return a structured JSON:
 {{
-  \"objective\": \"...\",
-  \"deliverables\": [\"...\", \"...\"],
-  \"timeline\": \"...\"
+  "objective": "...",
+  "deliverables": ["...", "..."],
+  "timeline": "..."
 }}
 """,
         input_variables=["input", "context"]
@@ -28,4 +28,4 @@ Given the OKR: \"{input}\" and examples: {context}, extract and return a structu
         chain_type_kwargs={"prompt": prompt}
     )
 
-    return chain 
+    return chain
