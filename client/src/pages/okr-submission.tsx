@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Sparkles, Target, Clock, Flag, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Sparkles, Target, Flag, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -47,47 +47,7 @@ const OkrSubmission = () => {
     },
   });
 
-  const createOkrMutation = useMutation({
-    mutationFn: async (data: Omit<InsertOkr, 'targetDate'>) => {
-      const { targetDate, ...rest } = data as any;
-      return apiRequest("POST", "/api/okrs", rest);
-    },
-    onSuccess: async (response) => {
-      const result = await response.json();
-      setSubmissionState("processing");
-      setTimeout(() => {
-        const parsed = result.parsed;
-        setParsedOkr({
-          objective: parsed.objective,
-          deliverables: parsed.deliverables,
-          timeline: parsed.timeline,
-          tasks: result.okr.tasks || []
-        });
-        setSubmissionState("parsed");
-        setTimeout(() => {
-          setSubmissionState("success");
-          queryClient.invalidateQueries({ queryKey: ["/api/okrs"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-        }, 3000);
-      }, 2000);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create OKR. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSubmit = (data: InsertOkr) => {
-    const { targetDate, ...rest } = data as any;
-    createOkrMutation.mutate(rest);
-  };
-
   const extractDeliverables = (description: string): string[] => {
-    // Simple extraction logic - in a real app this would be more sophisticated
     const matches = description.match(/\d+/g);
     const count = matches ? parseInt(matches[0]) : 3;
     
@@ -96,8 +56,74 @@ const OkrSubmission = () => {
     } else if (description.toLowerCase().includes("project")) {
       return Array.from({ length: count }, (_, i) => `Project ${i + 1}`);
     }
-    
-    return ["Research and Planning", "Core Development", "Review and Finalization"];
+    return ["Research", "Development", "Review"];
+  };
+
+  const createOkrMutation = useMutation({
+    mutationFn: async (data: InsertOkr) => {
+      // Mock response for development
+      if (process.env.NODE_ENV === 'development') {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+        return {
+          okr: {
+            ...data,
+            tasks: [
+              {
+                title: "Research phase",
+                description: "Initial research and planning",
+                deadline: new Date(Date.now() + 12096e5).toISOString().split('T')[0], // 2 weeks from now
+                priority: "high"
+              },
+              {
+                title: "Implementation",
+                description: "Core development work",
+                deadline: new Date(Date.now() + 24192e5).toISOString().split('T')[0], // 4 weeks from now
+                priority: "medium"
+              }
+            ]
+          },
+          parsed: {
+            objective: data.title,
+            deliverables: extractDeliverables(data.description),
+            timeline: "Q" + Math.ceil((new Date().getMonth() + 4) / 3) + " " + new Date().getFullYear()
+          }
+        };
+      }
+
+      // Real API call
+      const response = await apiRequest("POST", "/api/okrs", data);
+      if (!response.ok) throw new Error('API request failed');
+      return response.json();
+    },
+    onSuccess: (result) => {
+      setSubmissionState("processing");
+      setTimeout(() => {
+        setParsedOkr({
+          objective: result.parsed.objective,
+          deliverables: result.parsed.deliverables,
+          timeline: result.parsed.timeline,
+          tasks: result.okr.tasks || []
+        });
+        setSubmissionState("parsed");
+        setTimeout(() => {
+          setSubmissionState("success");
+          queryClient.invalidateQueries({ queryKey: ["/api/okrs"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        }, 2000);
+      }, 1500);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create OKR",
+        variant: "destructive",
+      });
+      setSubmissionState("form");
+    }
+  });
+
+  const handleSubmit = (data: InsertOkr) => {
+    createOkrMutation.mutate(data);
   };
 
   return (
@@ -108,12 +134,7 @@ const OkrSubmission = () => {
       animate="animate"
     >
       <div className="max-w-4xl mx-auto">
-        
-        {/* Header */}
-        <motion.div
-          className="flex items-center space-x-4 mb-8"
-          variants={slideUp}
-        >
+        <motion.div className="flex items-center space-x-4 mb-8" variants={slideUp}>
           <Button
             variant="ghost"
             size="sm"
@@ -125,25 +146,17 @@ const OkrSubmission = () => {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-white">Create New OKR</h1>
-            <p className="text-white/80">Define your objective and let AI generate actionable tasks</p>
+            <p className="text-white/80">Define your objective and key results</p>
           </div>
         </motion.div>
 
         <AnimatePresence mode="wait">
           {submissionState === "form" && (
-            <motion.div
-              key="form"
-              variants={scaleIn}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-            >
+            <motion.div key="form" variants={scaleIn} initial="initial" animate="animate" exit="exit">
               <Card className="glass-card rounded-3xl p-8">
                 <CardContent className="p-0">
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                      
-                      {/* OKR Title */}
                       <FormField
                         control={form.control}
                         name="title"
@@ -160,15 +173,11 @@ const OkrSubmission = () => {
                                 {...field}
                               />
                             </FormControl>
-                            <FormDescription>
-                              A clear and concise statement of what you want to achieve
-                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
 
-                      {/* OKR Description */}
                       <FormField
                         control={form.control}
                         name="description"
@@ -180,87 +189,59 @@ const OkrSubmission = () => {
                             </FormLabel>
                             <FormControl>
                               <Textarea
-                                placeholder="Describe your objective in detail. Include specific deliverables, success criteria, and any relevant context. The more detail you provide, the better AI can generate actionable micro-tasks."
+                                placeholder="Describe your objective in detail..."
                                 className="min-h-32 text-base resize-none"
                                 {...field}
                               />
                             </FormControl>
-                            <FormDescription>
-                              Our AI will analyze this description to generate micro-tasks and timelines
-                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
 
-                      {/* Target Date and Priority */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="priority"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="flex items-center font-semibold">
-                                <Flag className="w-4 h-4 mr-2 text-amber-600" />
-                                Priority Level
-                              </FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="py-3">
-                                    <SelectValue placeholder="Select priority" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="high">
-                                    <div className="flex items-center">
-                                      <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
-                                      High Priority
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="medium">
-                                    <div className="flex items-center">
-                                      <div className="w-2 h-2 bg-amber-500 rounded-full mr-2"></div>
-                                      Medium Priority
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="low">
-                                    <div className="flex items-center">
-                                      <div className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></div>
-                                      Low Priority
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                      <FormField
+                        control={form.control}
+                        name="priority"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center font-semibold">
+                              <Flag className="w-4 h-4 mr-2 text-amber-600" />
+                              Priority Level
+                            </FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="py-3">
+                                  <SelectValue placeholder="Select priority" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="high">High Priority</SelectItem>
+                                <SelectItem value="medium">Medium Priority</SelectItem>
+                                <SelectItem value="low">Low Priority</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                      {/* Submit Button */}
-                      <motion.div
-                        className="pt-6"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                      <Button
+                        type="submit"
+                        disabled={createOkrMutation.isPending}
+                        className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white py-4 px-6 rounded-xl text-lg"
                       >
-                        <Button
-                          type="submit"
-                          disabled={createOkrMutation.isPending}
-                          className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-medium py-4 px-6 rounded-xl text-lg"
-                        >
-                          {createOkrMutation.isPending ? (
-                            <>
-                              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                              Creating OKR...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-5 h-5 mr-2" />
-                              Parse & Create OKR
-                            </>
-                          )}
-                        </Button>
-                      </motion.div>
+                        {createOkrMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            Creating OKR...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-5 h-5 mr-2" />
+                            Create OKR
+                          </>
+                        )}
+                      </Button>
                     </form>
                   </Form>
                 </CardContent>
@@ -269,14 +250,7 @@ const OkrSubmission = () => {
           )}
 
           {submissionState === "processing" && (
-            <motion.div
-              key="processing"
-              variants={scaleIn}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="text-center py-16"
-            >
+            <motion.div key="processing" variants={scaleIn} className="text-center py-16">
               <Card className="glass-card rounded-3xl p-12">
                 <CardContent className="p-0">
                   <motion.div
@@ -284,32 +258,15 @@ const OkrSubmission = () => {
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                     className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto mb-6"
                   />
-                  <h3 className="text-2xl font-bold text-gray-800 mb-4">Processing Your OKR... 🧠</h3>
-                  <p className="text-gray-600 text-lg">
-                    Our AI is analyzing your objective and generating actionable micro-tasks
-                  </p>
-                  <motion.div
-                    className="flex justify-center space-x-2 mt-6"
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                    <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                  </motion.div>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4">Processing Your OKR</h3>
+                  <p className="text-gray-600 text-lg">Generating tasks and timeline...</p>
                 </CardContent>
               </Card>
             </motion.div>
           )}
 
           {submissionState === "parsed" && parsedOkr && (
-            <motion.div
-              key="parsed"
-              variants={scaleIn}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-            >
+            <motion.div key="parsed" variants={scaleIn}>
               <Card className="glass-card rounded-3xl p-8">
                 <CardContent className="p-0">
                   <div className="text-center mb-8">
@@ -320,20 +277,17 @@ const OkrSubmission = () => {
                     >
                       <CheckCircle className="text-white text-2xl" />
                     </motion.div>
-                    <h3 className="text-2xl font-bold text-gray-800 mb-2">OKR Successfully Parsed! 🎉</h3>
-                    <p className="text-gray-600">Here's how we've structured your objective:</p>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">OKR Parsed Successfully</h3>
                   </div>
 
                   <div className="space-y-6">
-                    {/* Objective */}
                     <div className="bg-indigo-50 rounded-xl p-6 border border-indigo-100">
-                      <h4 className="font-semibold text-indigo-800 mb-2">📋 Objective</h4>
+                      <h4 className="font-semibold text-indigo-800 mb-2">Objective</h4>
                       <p className="text-gray-700">{parsedOkr.objective}</p>
                     </div>
 
-                    {/* Deliverables */}
                     <div className="bg-purple-50 rounded-xl p-6 border border-purple-100">
-                      <h4 className="font-semibold text-purple-800 mb-3">🎯 Key Deliverables</h4>
+                      <h4 className="font-semibold text-purple-800 mb-3">Key Deliverables</h4>
                       <div className="flex flex-wrap gap-2">
                         {parsedOkr.deliverables.map((deliverable, index) => (
                           <Badge key={index} variant="secondary" className="bg-purple-100 text-purple-800">
@@ -343,18 +297,8 @@ const OkrSubmission = () => {
                       </div>
                     </div>
 
-                    {/* Timeline */}
-                    <div className="bg-emerald-50 rounded-xl p-6 border border-emerald-100">
-                      <h4 className="font-semibold text-emerald-800 mb-2">📅 Timeline</h4>
-                      <p className="text-gray-700">Target completion: {parsedOkr.timeline}</p>
-                    </div>
-
-                    {/* Generated Tasks */}
                     <div className="bg-amber-50 rounded-xl p-6 border border-amber-100">
-                      <h4 className="font-semibold text-amber-800 mb-3">⚡ Generated Micro-Tasks</h4>
-                      <p className="text-sm text-amber-700 mb-4">
-                        {parsedOkr.tasks.length} actionable tasks have been created to help you achieve your objective
-                      </p>
+                      <h4 className="font-semibold text-amber-800 mb-3">Generated Tasks</h4>
                       <div className="space-y-2">
                         {parsedOkr.tasks.slice(0, 3).map((task, index) => (
                           <div key={index} className="flex items-center space-x-2 text-sm">
@@ -365,11 +309,6 @@ const OkrSubmission = () => {
                             </Badge>
                           </div>
                         ))}
-                        {parsedOkr.tasks.length > 3 && (
-                          <p className="text-xs text-gray-500 mt-2">
-                            + {parsedOkr.tasks.length - 3} more tasks...
-                          </p>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -379,14 +318,7 @@ const OkrSubmission = () => {
           )}
 
           {submissionState === "success" && (
-            <motion.div
-              key="success"
-              variants={scaleIn}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="text-center py-16"
-            >
+            <motion.div key="success" variants={scaleIn} className="text-center py-16">
               <Card className="glass-card rounded-3xl p-12">
                 <CardContent className="p-0">
                   <motion.div
@@ -396,34 +328,28 @@ const OkrSubmission = () => {
                   >
                     <CheckCircle className="text-white text-3xl" />
                   </motion.div>
-                  <h3 className="text-3xl font-bold text-gray-800 mb-4">OKR Created Successfully! 🚀</h3>
+                  <h3 className="text-3xl font-bold text-gray-800 mb-4">OKR Created!</h3>
                   <p className="text-gray-600 text-lg mb-8">
-                    Your objective is now active with {parsedOkr?.tasks.length || 0} micro-tasks ready to tackle
+                    {parsedOkr?.tasks.length || 0} tasks generated
                   </p>
                   
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Button
-                        onClick={() => navigate("/")}
-                        className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-8 py-3 rounded-xl"
-                      >
-                        View Dashboard
-                      </Button>
-                    </motion.div>
-                    
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setSubmissionState("form");
-                          setParsedOkr(null);
-                          form.reset();
-                        }}
-                        className="px-8 py-3 rounded-xl"
-                      >
-                        Create Another OKR
-                      </Button>
-                    </motion.div>
+                    <Button
+                      onClick={() => navigate("/")}
+                      className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-8 py-3 rounded-xl"
+                    >
+                      View Dashboard
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSubmissionState("form");
+                        form.reset();
+                      }}
+                      className="px-8 py-3 rounded-xl"
+                    >
+                      Create Another
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
