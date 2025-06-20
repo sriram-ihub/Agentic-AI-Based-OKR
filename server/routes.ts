@@ -30,19 +30,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/okrs", async (req, res) => {
     try {
+      // Hard code targetDate if missing
+      if (!req.body.targetDate) {
+        req.body.targetDate = "2025-12-31T00:00:00.000Z";
+      }
       const validatedData = insertOkrSchema.parse(req.body);
-      const okr = await storage.createOkr(validatedData);
       
       // Generate micro-tasks (simplified AI parsing simulation)
-      const tasks = await generateMicroTasks(okr.id, validatedData.description);
-      
-      res.json({ okr, tasks });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid OKR data", details: error.errors });
-      }
-      res.status(500).json({ error: "Failed to create OKR" });
+    const parsedOkr = await callOkrParserAgent(
+      `${validatedData.title}. ${validatedData.description} Target: ${validatedData.targetDate}`
+    );
+
+    const okr = await storage.createOkr(validatedData);
+     res.json({ okr, parsed: parsedOkr });
+      } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid OKR data", details: error.errors });
     }
+    res.status(500).json({ error: "Failed to create OKR" });
+  }
   });
 
   // Task routes
@@ -111,6 +117,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to complete task" });
     }
   });
+
+  
 
   // Reminder routes
   app.get("/api/reminders", async (req, res) => {
@@ -266,4 +274,19 @@ async function generateMicroTasks(okrId: number, description: string) {
 function extractNumber(text: string): number | null {
   const match = text.match(/\d+/);
   return match ? parseInt(match[0]) : null;
+}
+
+
+// Add this function at the top of the file
+async function callOkrParserAgent(okrText :string) {
+  const response = await fetch('http://localhost:8000/parse_okr', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ okr_text: okrText }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to parse OKR with agent');
+  }
+  const data = await response.json();
+  return data.parsed;
 }

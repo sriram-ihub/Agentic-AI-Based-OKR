@@ -43,30 +43,27 @@ const OkrSubmission = () => {
     defaultValues: {
       title: "",
       description: "",
-      targetDate: new Date(),
       priority: "medium",
     },
   });
 
   const createOkrMutation = useMutation({
-    mutationFn: async (data: InsertOkr) => {
-      return apiRequest("POST", "/api/okrs", data);
+    mutationFn: async (data: Omit<InsertOkr, 'targetDate'>) => {
+      const { targetDate, ...rest } = data as any;
+      return apiRequest("POST", "/api/okrs", rest);
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
+      const result = await response.json();
       setSubmissionState("processing");
-      
-      // Simulate parsing process
       setTimeout(() => {
-        const mockParsed: ParsedOkr = {
-          objective: form.getValues("title"),
-          deliverables: extractDeliverables(form.getValues("description")),
-          timeline: form.getValues("targetDate").toLocaleDateString(),
-          tasks: response.tasks || []
-        };
-        setParsedOkr(mockParsed);
+        const parsed = result.parsed;
+        setParsedOkr({
+          objective: parsed.objective,
+          deliverables: parsed.deliverables,
+          timeline: parsed.timeline,
+          tasks: result.okr.tasks || []
+        });
         setSubmissionState("parsed");
-        
-        // Auto advance to success after showing parsed results
         setTimeout(() => {
           setSubmissionState("success");
           queryClient.invalidateQueries({ queryKey: ["/api/okrs"] });
@@ -85,7 +82,8 @@ const OkrSubmission = () => {
   });
 
   const handleSubmit = (data: InsertOkr) => {
-    createOkrMutation.mutate(data);
+    const { targetDate, ...rest } = data as any;
+    createOkrMutation.mutate(rest);
   };
 
   const extractDeliverables = (description: string): string[] => {
@@ -197,29 +195,6 @@ const OkrSubmission = () => {
 
                       {/* Target Date and Priority */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="targetDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="flex items-center font-semibold">
-                                <Clock className="w-4 h-4 mr-2 text-emerald-600" />
-                                Target Date
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="date"
-                                  className="py-3"
-                                  {...field}
-                                  value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
-                                  onChange={(e) => field.onChange(new Date(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
                         <FormField
                           control={form.control}
                           name="priority"
