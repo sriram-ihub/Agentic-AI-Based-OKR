@@ -14,10 +14,10 @@ Develop an AI-driven feature for an OKR platform that enhances student engagemen
 
 ---
 
-## Architecture Overview
 
 ## Architecture Diagram
 ![alt text](<System Architecture Diagram_ Frontend, Backend, and LangGraph Workflow - visual selection.png>)
+
 
 ### Agentic AI Workflow
 
@@ -44,7 +44,8 @@ Develop an AI-driven feature for an OKR platform that enhances student engagemen
    - **Output:** Task completion status (completed/pending)
 
 
----
+## Input flow Diagram 
+![alt text](<OKR Management System User Flow - visual selection.png>)
 
 ## Layer Responsibilities
 
