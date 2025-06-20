@@ -1,0 +1,82 @@
+Design a frontend user interface for a student-facing OKR (Objectives and Key Results) Action Tracker & Reminder System. The interface should support the following end-to-end workflow. This is a single-persona application (student user), and no authentication is required.
+
+UI Requirements:
+
+OKR Submission Page
+
+Input field (multi-line) to enter a high-level OKR (e.g., "Publish 3 articles on AI by Q4").
+
+Submit button to send OKR for processing.
+
+Display of parsed OKR details after submission (Objective, Deliverables, Timeline).
+
+Visual confirmation that OKR was accepted and parsed.
+
+Task Dashboard (Main Page)
+
+Section to display list of micro-tasks (generated from OKR).
+
+Each task should show:
+
+Task description
+
+Deadline
+
+Priority level (Low, Medium, High)
+
+Completion status (checkbox or toggle)
+
+Option to manually mark task as completed.
+
+Real-time progress bar for overall OKR progress.
+
+Reminder Center
+
+Section to view upcoming task deadlines.
+
+Reminder messages (e.g., “Write 500 words for article 1 – due tomorrow”)
+
+Show whether the reminder was delivered via email or dashboard.
+
+Display status (Sent, Viewed, Skipped).
+
+Progress Visualization
+
+Visual tracker (progress bar or pie chart) of overall OKR completion.
+
+Timeline view showing completed vs. pending tasks.
+
+Option to filter by week or objective.
+
+Task Completion Validation Page
+
+Input for user to paste a proof URL (e.g., GitHub link or LinkedIn post).
+
+Manual confirmation option if no link is provided.
+
+Confirmation message upon task verification.
+
+Flow:
+
+User submits a high-level OKR →
+
+Parsed OKR and micro-tasks are displayed →
+
+Tasks appear in dashboard with deadlines and priorities →
+
+Reminders show up on dashboard (and are assumed to be emailed) →
+
+User marks tasks complete manually or with proof →
+
+Progress is reflected in a visual tracker in real-time.
+
+Constraints:
+
+No authentication
+
+Single user persona (student)
+
+No agent logic shown on UI
+
+Focus only on clean, intuitive interaction and visibility into task and OKR progress
+
