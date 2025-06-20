@@ -16,6 +16,9 @@ Develop an AI-driven feature for an OKR platform that enhances student engagemen
 
 ## Architecture Overview
 
+## Architecture Diagram
+![alt text](<System Architecture Diagram_ Frontend, Backend, and LangGraph Workflow - visual selection.png>)
+
 ### Agentic AI Workflow
 
 1. **OKR Parser Agent (RAG)**
@@ -40,10 +43,6 @@ Develop an AI-driven feature for an OKR platform that enhances student engagemen
    - **Input:** Micro-task list + user input/external evidence URLs
    - **Output:** Task completion status (completed/pending)
 
-5. **Database Updater Agent**
-   - Auto-updates MongoDB records with task completion status, OKR progress, and reminder logs.
-   - **Input:** Task completion status + reminder logs
-   - **Output:** Updated MongoDB records
 
 ---
 
@@ -136,30 +135,6 @@ Develop an AI-driven feature for an OKR platform that enhances student engagemen
    cd app
    uvicorn main:app --reload --port 8000
    ```
-
----
-
-## Agent Details
-
-### OKR Parser Agent
-
-- **File:** `parser_agent.py`
-- **Tech:** LangChain, RAG, FAISS, OpenAI/Gemini
-- **Function:** Extracts objectives, deliverables, and timelines from user OKR input.
-- **RAG Source:** `sample_okrs.txt`
-
-### Micro-Task Generator Agent
-
-- **File:** `micro_task_generator.py`
-- **Tech:** LangChain, Gemini
-- **Function:** Breaks parsed OKRs into actionable micro-tasks with deadlines and priorities.
-
-### Reminder Agent
-
-- **File:** `reminder_agent.py`
-- **Tech:** LangChain, Gemini, FAISS, RAG
-- **Function:** Sends personalized reminders via dashboard or email, using user context and task deadlines.
-
 ---
 
 ## Sample Flow
@@ -226,12 +201,6 @@ Publish 3 articles on AI by Q4
 ## Example Reminder Output
 
 - Dashboard notification or email sent 24 hours before task deadline, personalized using user history.
-
----
-
-## License
-
-MIT
 
 ---
 
