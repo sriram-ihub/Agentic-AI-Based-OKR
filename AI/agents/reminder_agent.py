@@ -8,18 +8,18 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 class ReminderAgent:
     def __init__(self, vector_store_path: str):
         self.llm = ChatGoogleGenerativeAI(
             model="models/gemini-2.0-flash",
-            google_api_key=GEMINI_API_KEY,
+            google_api_key=GOOGLE_API_KEY,
             temperature=0.3
         )
         self.vectorstore = FAISS.load_local(
             vector_store_path,
-            GoogleGenerativeAIEmbeddings(google_api_key=GEMINI_API_KEY)
+            GoogleGenerativeAIEmbeddings(google_api_key=GOOGLE_API_KEY)
         )
         self.rag_chain = RetrievalQA.from_chain_type(
             llm=self.llm,

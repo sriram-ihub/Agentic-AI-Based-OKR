@@ -1,11 +1,13 @@
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
-from langchain.chat_models import ChatOpenAI
-from app.vector_store import load_vector_retriever
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from vectorstores.vector_store import load_vector_retriever
+
 
 def create_okr_parser():
     retriever = load_vector_retriever()
-    llm = ChatOpenAI(temperature=0.2, model="gpt-4")
+    llm = ChatGoogleGenerativeAI(temperature=0.2, model="gemini-2.0-flash")
 
     prompt = PromptTemplate(
         template="""

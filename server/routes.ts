@@ -5,6 +5,20 @@ import { insertOkrSchema, insertTaskSchema, updateTaskSchema } from "@shared/sch
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  async function callOkrParserAgent(okrText :string) {
+  const response = await fetch('http://localhost:8000/parse_okr', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ okr_text: okrText }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to parse OKR with agent');
+  }
+  const data = await response.json();
+  return data.parsed;
+}
+  
   // OKR routes
   app.get("/api/okrs", async (req, res) => {
     try {
@@ -30,7 +44,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/okrs", async (req, res) => {
     try {
-      // Hard code targetDate if missing
       if (!req.body.targetDate) {
         req.body.targetDate = "2025-12-31T00:00:00.000Z";
       }

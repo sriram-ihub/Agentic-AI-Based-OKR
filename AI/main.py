@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
-from app.parser_agent import create_okr_parser
+from agents.parser_agent import create_okr_parser
 
 app = FastAPI()
 parser_chain = create_okr_parser()
